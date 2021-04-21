@@ -4,7 +4,7 @@ namespace DSharpPlus
 {
     public static class PermissionMethods
     {
-        internal static Permissions FULL_PERMS { get; } = (Permissions)2147483647L;
+        internal static Permissions FULL_PERMS { get; } = ~Permissions.None;
 
         /// <summary>
         /// Calculates whether this permission set contains the given permission.
