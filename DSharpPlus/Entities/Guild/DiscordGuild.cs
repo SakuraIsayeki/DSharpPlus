@@ -455,7 +455,8 @@ namespace DSharpPlus.Entities
         /// <exception cref="Exceptions.ServerErrorException">Thrown when Discord is unable to process the request.</exception>
         public async Task<DiscordGuild> ModifyAsync(Action<GuildEditModel> action)
         {
-            var mdl = new GuildEditModel();
+			GuildEditModel mdl = new();
+
             action(mdl);
             if (mdl.AfkChannel.HasValue && mdl.AfkChannel.Value.Type != ChannelType.Voice)
                 throw new ArgumentException("AFK channel needs to be a voice channel.");
@@ -621,10 +622,10 @@ namespace DSharpPlus.Entities
         public Task<DiscordChannel> CreateChannelAsync(string name, ChannelType type, DiscordChannel parent = null, Optional<string> topic = default, int? bitrate = null, int? userLimit = null, IEnumerable<DiscordOverwriteBuilder> overwrites = null, bool? nsfw = null, Optional<int?> perUserRateLimit = default, string reason = null)
         {
             // technically you can create news/store channels but not always
-            if (type != ChannelType.Text && type != ChannelType.Voice && type != ChannelType.Category && type != ChannelType.News && type != ChannelType.Store)
+            if (type is not ChannelType.Text and not ChannelType.Voice and not ChannelType.Category and not ChannelType.News and not ChannelType.Store)
                 throw new ArgumentException("Channel type must be text, voice, or category.", nameof(type));
 
-            if (type == ChannelType.Category && parent != null)
+            if (type == ChannelType.Category && parent is not null)
                 throw new ArgumentException("Cannot specify parent of a channel category.", nameof(parent));
 
             return this.Discord.ApiClient.CreateGuildChannelAsync(this.Id, name, type, parent?.Id, topic, bitrate, userLimit, overwrites, nsfw, perUserRateLimit, reason);
@@ -654,9 +655,9 @@ namespace DSharpPlus.Entities
         /// <exception cref="Exceptions.ServerErrorException">Thrown when Discord is unable to process the request.</exception>
         public Task<int> GetPruneCountAsync(int days = 7, IEnumerable<DiscordRole> includedRoles = null)
         {
-            if (includedRoles != null)
+            if (includedRoles is not null)
             {
-                includedRoles = includedRoles.Where(r => r != null);
+                includedRoles = includedRoles.Where(r => r is not null);
                 var roleCount = includedRoles.Count();
                 var roleArr = includedRoles.ToArray();
                 var rawRoleIds = new List<ulong>();
@@ -687,9 +688,9 @@ namespace DSharpPlus.Entities
         /// <exception cref="Exceptions.ServerErrorException">Thrown when Discord is unable to process the request.</exception>
         public Task<int?> PruneAsync(int days = 7, bool computePruneCount = true, IEnumerable<DiscordRole> includedRoles = null, string reason = null)
         {
-            if (includedRoles != null)
+            if (includedRoles is not null)
             {
-                includedRoles = includedRoles.Where(r => r != null);
+                includedRoles = includedRoles.Where(r => r is not null);
                 var roleCount = includedRoles.Count();
                 var roleArr = includedRoles.ToArray();
                 var rawRoleIds = new List<ulong>();
@@ -836,32 +837,16 @@ namespace DSharpPlus.Entities
         /// <returns>The URL of the widget image.</returns>
         public string GetWidgetImage(WidgetType bannerType = WidgetType.Shield)
         {
-            string param;
+			string param = bannerType switch
+			{
+				WidgetType.Banner1 => "banner1",
+				WidgetType.Banner2 => "banner2",
+				WidgetType.Banner3 => "banner3",
+				WidgetType.Banner4 => "banner4",
+				_ => "shield",
+			};
 
-            switch (bannerType)
-            {
-                case WidgetType.Banner1:
-                    param = "banner1";
-                    break;
-
-                case WidgetType.Banner2:
-                    param = "banner2";
-                    break;
-
-                case WidgetType.Banner3:
-                    param = "banner3";
-                    break;
-
-                case WidgetType.Banner4:
-                    param = "banner4";
-                    break;
-
-                default:
-                    param = "shield";
-                    break;
-            }
-
-            return $"{Net.Endpoints.BASE_URI}{Net.Endpoints.GUILDS}/{this.Id}{Net.Endpoints.WIDGET_PNG}?style={param}";
+			return $"{Net.Endpoints.BASE_URI}{Net.Endpoints.GUILDS}/{this.Id}{Net.Endpoints.WIDGET_PNG}?style={param}";
         }
 
         /// <summary>
@@ -897,19 +882,19 @@ namespace DSharpPlus.Entities
         /// <exception cref="Exceptions.ServerErrorException">Thrown when Discord is unable to process the request.</exception>
         public async Task<IReadOnlyCollection<DiscordMember>> GetAllMembersAsync()
         {
-            var recmbr = new HashSet<DiscordMember>();
+			HashSet<DiscordMember> recmbr = new();
 
-            var recd = 1000;
-            var last = 0ul;
+			int recd = 1000;
+			ulong last = 0ul;
+
             while (recd > 0)
             {
-                var tms = await this.Discord.ApiClient.ListGuildMembersAsync(this.Id, 1000, last == 0 ? null : (ulong?)last).ConfigureAwait(false);
+                var tms = await this.Discord.ApiClient.ListGuildMembersAsync(this.Id, 1000, last is 0 ? null : last).ConfigureAwait(false);
                 recd = tms.Count;
 
                 foreach (var xtm in tms)
                 {
-                    var usr = new DiscordUser(xtm.User) { Discord = this.Discord };
-
+					DiscordUser usr = new(xtm.User) { Discord = this.Discord };
                     usr = this.Discord.UserCache.AddOrUpdate(xtm.User.Id, usr, (id, old) =>
                     {
                         old.Username = usr.Username;
@@ -919,7 +904,7 @@ namespace DSharpPlus.Entities
                         return old;
                     });
 
-                    recmbr.Add(new DiscordMember(xtm) { Discord = this.Discord, _guild_id = this.Id });
+                    recmbr.Add(new(xtm) { Discord = this.Discord, _guild_id = this.Id });
                 }
 
                 var tm = tms.LastOrDefault();
@@ -941,16 +926,16 @@ namespace DSharpPlus.Entities
         /// <param name="nonce">The unique string to identify the response.</param>
         public async Task RequestMembersAsync(string query = "", int limit = 0, bool? presences = null, IEnumerable<ulong> userIds = null, string nonce = null)
         {
-            if (!(this.Discord is DiscordClient client))
+            if (this.Discord is not DiscordClient client)
                 throw new InvalidOperationException("This operation is only valid for regular Discord clients.");
 
-            if (query == null && userIds == null)
+            if (query is null && userIds is null)
                 throw new ArgumentException("The query and user IDs cannot both be null.");
 
-            if (query != null && userIds != null)
+            if (query is not null && userIds is not null)
                 query = null;
 
-            var grgm = new GatewayRequestGuildMembers(this)
+			GatewayRequestGuildMembers grgm = new(this)
             {
                 Query = query,
                 Limit = limit >= 0 ? limit : 0,
@@ -959,13 +944,13 @@ namespace DSharpPlus.Entities
                 Nonce = nonce
             };
 
-            var payload = new GatewayPayload
+			GatewayPayload payload = new()
             {
                 OpCode = GatewayOpCode.RequestGuildMembers,
                 Data = grgm
             };
 
-            var payloadStr = JsonConvert.SerializeObject(payload, Formatting.None);
+			string payloadStr = JsonConvert.SerializeObject(payload, Formatting.None);
             await client.WsSendAsync(payloadStr).ConfigureAwait(false);
         }
 
@@ -1008,7 +993,7 @@ namespace DSharpPlus.Entities
         /// <returns>Requested channel.</returns>
         /// <exception cref="Exceptions.ServerErrorException">Thrown when Discord is unable to process the request.</exception>
         public DiscordChannel GetChannel(ulong id)
-            => (this._channels != null && this._channels.TryGetValue(id, out var channel)) ? channel : null;
+            => (this._channels is not null && this._channels.TryGetValue(id, out var channel)) ? channel : null;
 
         /// <summary>
         /// Gets audit log entries for this guild.
@@ -1021,16 +1006,17 @@ namespace DSharpPlus.Entities
         /// <exception cref="Exceptions.ServerErrorException">Thrown when Discord is unable to process the request.</exception>
         public async Task<IReadOnlyList<DiscordAuditLogEntry>> GetAuditLogsAsync(int? limit = null, DiscordMember by_member = null, AuditLogActionType? action_type = null)
         {
-            var alrs = new List<AuditLog>();
+			List<AuditLog> alrs = new();
             int ac = 1, tc = 0, rmn = 100;
-            var last = 0ul;
+			ulong last = 0ul;
+
             while (ac > 0)
             {
-                rmn = limit != null ? limit.Value - tc : 100;
+                rmn = limit is not null ? limit.Value - tc : 100;
                 rmn = Math.Min(100, rmn);
                 if (rmn <= 0) break;
 
-                var alr = await this.Discord.ApiClient.GetAuditLogsAsync(this.Id, rmn, null, last == 0 ? null : (ulong?)last, by_member?.Id, (int?)action_type).ConfigureAwait(false);
+                var alr = await this.Discord.ApiClient.GetAuditLogsAsync(this.Id, rmn, null, last is 0 ? null : last, by_member?.Id, (int?)action_type).ConfigureAwait(false);
                 ac = alr.Entries.Count();
                 tc += ac;
                 if (ac > 0)
@@ -1115,16 +1101,16 @@ namespace DSharpPlus.Entities
                                 case "owner_id":
                                     entrygld.OwnerChange = new PropertyChange<DiscordMember>
                                     {
-                                        Before = (this._members != null && this._members.TryGetValue(xc.OldValueUlong, out var oldMember)) ? oldMember : await this.GetMemberAsync(xc.OldValueUlong).ConfigureAwait(false),
-                                        After = (this._members != null && this._members.TryGetValue(xc.NewValueUlong, out var newMember)) ? newMember : await this.GetMemberAsync(xc.NewValueUlong).ConfigureAwait(false)
+                                        Before = (this._members is not null && this._members.TryGetValue(xc.OldValueUlong, out var oldMember)) ? oldMember : await this.GetMemberAsync(xc.OldValueUlong).ConfigureAwait(false),
+                                        After = (this._members is not null && this._members.TryGetValue(xc.NewValueUlong, out var newMember)) ? newMember : await this.GetMemberAsync(xc.NewValueUlong).ConfigureAwait(false)
                                     };
                                     break;
 
                                 case "icon_hash":
                                     entrygld.IconChange = new PropertyChange<string>
                                     {
-                                        Before = xc.OldValueString != null ? $"https://cdn.discordapp.com/icons/{this.Id}/{xc.OldValueString}.webp" : null,
-                                        After = xc.OldValueString != null ? $"https://cdn.discordapp.com/icons/{this.Id}/{xc.NewValueString}.webp" : null
+                                        Before = xc.OldValueString is not null ? $"https://cdn.discordapp.com/icons/{this.Id}/{xc.OldValueString}.webp" : null,
+                                        After = xc.OldValueString is not null ? $"https://cdn.discordapp.com/icons/{this.Id}/{xc.NewValueString}.webp" : null
                                     };
                                     break;
 
@@ -1161,8 +1147,8 @@ namespace DSharpPlus.Entities
                                 case "splash_hash":
                                     entrygld.SplashChange = new PropertyChange<string>
                                     {
-                                        Before = xc.OldValueString != null ? $"https://cdn.discordapp.com/splashes/{this.Id}/{xc.OldValueString}.webp?size=2048" : null,
-                                        After = xc.NewValueString != null ? $"https://cdn.discordapp.com/splashes/{this.Id}/{xc.NewValueString}.webp?size=2048" : null
+                                        Before = xc.OldValueString is not null ? $"https://cdn.discordapp.com/splashes/{this.Id}/{xc.OldValueString}.webp?size=2048" : null,
+                                        After = xc.NewValueString is not null ? $"https://cdn.discordapp.com/splashes/{this.Id}/{xc.NewValueString}.webp?size=2048" : null
                                     };
                                     break;
 
@@ -1232,8 +1218,8 @@ namespace DSharpPlus.Entities
                                 case "name":
                                     entrychn.NameChange = new PropertyChange<string>
                                     {
-                                        Before = xc.OldValue != null ? xc.OldValueString : null,
-                                        After = xc.NewValue != null ? xc.NewValueString : null
+                                        Before = xc.OldValue is not null ? xc.OldValueString : null,
+                                        After = xc.NewValue is not null ? xc.NewValueString : null
                                     };
                                     break;
 
@@ -1259,8 +1245,8 @@ namespace DSharpPlus.Entities
 
                                     entrychn.OverwriteChange = new PropertyChange<IReadOnlyList<DiscordOverwrite>>
                                     {
-                                        Before = olds != null ? new ReadOnlyCollection<DiscordOverwrite>(new List<DiscordOverwrite>(olds)) : null,
-                                        After = news != null ? new ReadOnlyCollection<DiscordOverwrite>(new List<DiscordOverwrite>(news)) : null
+                                        Before = olds is not null ? new ReadOnlyCollection<DiscordOverwrite>(new List<DiscordOverwrite>(olds)) : null,
+                                        After = news is not null ? new ReadOnlyCollection<DiscordOverwrite>(new List<DiscordOverwrite>(news)) : null
                                     };
                                     break;
 
@@ -1466,24 +1452,24 @@ namespace DSharpPlus.Entities
 
                                     entryrol.ColorChange = new PropertyChange<int?>
                                     {
-                                        Before = p1 ? (int?)t3 : null,
-                                        After = p2 ? (int?)t4 : null
+                                        Before = p1 ? t3 : null,
+                                        After = p2 ? t4 : null
                                     };
                                     break;
 
                                 case "permissions":
                                     entryrol.PermissionChange = new PropertyChange<Permissions?>
                                     {
-                                        Before = xc.OldValue != null ? (Permissions?)long.Parse((string)xc.OldValue) : null,
-                                        After = xc.NewValue != null ? (Permissions?)long.Parse((string)xc.NewValue) : null
+                                        Before = xc.OldValue is not null ? (Permissions?)long.Parse((string)xc.OldValue) : null,
+                                        After = xc.NewValue is not null ? (Permissions?)long.Parse((string)xc.NewValue) : null
                                     };
                                     break;
 
                                 case "position":
                                     entryrol.PositionChange = new PropertyChange<int?>
                                     {
-                                        Before = xc.OldValue != null ? (int?)(long)xc.OldValue : null,
-                                        After = xc.NewValue != null ? (int?)(long)xc.NewValue : null,
+                                        Before = xc.OldValue is not null ? (int?)(long)xc.OldValue : null,
+                                        After = xc.NewValue is not null ? (int?)(long)xc.NewValue : null,
                                     };
                                     break;
 
@@ -1515,7 +1501,7 @@ namespace DSharpPlus.Entities
                     case AuditLogActionType.InviteUpdate:
                         entry = new DiscordAuditLogInviteEntry();
 
-                        var inv = new DiscordInvite
+                        DiscordInvite inv = new()
                         {
                             Discord = this.Discord,
                             Guild = new DiscordInviteGuild
@@ -1538,8 +1524,8 @@ namespace DSharpPlus.Entities
 
                                     entryinv.MaxAgeChange = new PropertyChange<int?>
                                     {
-                                        Before = p1 ? (int?)t3 : null,
-                                        After = p2 ? (int?)t4 : null
+                                        Before = p1 ? t3 : null,
+                                        After = p2 ? t4 : null
                                     };
                                     break;
 
@@ -1556,8 +1542,8 @@ namespace DSharpPlus.Entities
                                 case "temporary":
                                     entryinv.TemporaryChange = new PropertyChange<bool?>
                                     {
-                                        Before = xc.OldValue != null ? (bool?)xc.OldValue : null,
-                                        After = xc.NewValue != null ? (bool?)xc.NewValue : null
+                                        Before = xc.OldValue is not null ? (bool?)xc.OldValue : null,
+                                        After = xc.NewValue is not null ? (bool?)xc.NewValue : null
                                     };
                                     break;
 
@@ -1589,7 +1575,7 @@ namespace DSharpPlus.Entities
                                         Discord = this.Discord,
                                         Id = p1 ? t1 : t2,
                                         Name = ch?.Name,
-                                        Type = cht != null ? cht.Value : ChannelType.Unknown
+                                        Type = cht is not null ? cht.Value : ChannelType.Unknown
                                     };
                                     break;
 
@@ -1599,8 +1585,8 @@ namespace DSharpPlus.Entities
 
                                     entryinv.UsesChange = new PropertyChange<int?>
                                     {
-                                        Before = p1 ? (int?)t3 : null,
-                                        After = p2 ? (int?)t4 : null
+                                        Before = p1 ? t3 : null,
+                                        After = p2 ? t4 : null
                                     };
                                     break;
 
@@ -1610,8 +1596,8 @@ namespace DSharpPlus.Entities
 
                                     entryinv.MaxUsesChange = new PropertyChange<int?>
                                     {
-                                        Before = p1 ? (int?)t3 : null,
-                                        After = p2 ? (int?)t4 : null
+                                        Before = p1 ? t3 : null,
+                                        After = p2 ? t4 : null
                                     };
                                     break;
 
@@ -1662,8 +1648,8 @@ namespace DSharpPlus.Entities
 
                                     entrywhk.TypeChange = new PropertyChange<int?>
                                     {
-                                        Before = p1 ? (int?)t3 : null,
-                                        After = p2 ? (int?)t4 : null
+                                        Before = p1 ? t3 : null,
+                                        After = p2 ? t4 : null
                                     };
                                     break;
 
@@ -1717,16 +1703,16 @@ namespace DSharpPlus.Entities
 
                             var entrymsg = entry as DiscordAuditLogMessageEntry;
 
-                            if (xac.Options != null)
+                            if (xac.Options is not null)
                             {
                                 entrymsg.Channel = this.GetChannel(xac.Options.ChannelId) ?? new DiscordChannel { Id = xac.Options.ChannelId, Discord = this.Discord, GuildId = this.Id };
                                 entrymsg.MessageCount = xac.Options.Count;
                             }
 
-                            if (entrymsg.Channel != null)
+                            if (entrymsg.Channel is not null)
                             {
                                 if (this.Discord is DiscordClient dc
-                                    && dc.MessageCache != null
+                                    && dc.MessageCache is not null
                                     && dc.MessageCache.TryGet(xm => xm.Id == xac.TargetId.Value && xm.ChannelId == entrymsg.Channel.Id, out var msg))
                                 {
                                     entrymsg.Target = msg;
@@ -1746,48 +1732,45 @@ namespace DSharpPlus.Entities
 
                             var entrypin = entry as DiscordAuditLogMessagePinEntry;
 
-                            if (!(this.Discord is DiscordClient dc))
-                            {
-                                break;
-                            }
+                            if (this.Discord is not DiscordClient dc) break;
 
-                            if (xac.Options != null)
+                            if (xac.Options is not null)
                             {
                                 DiscordMessage message = default;
                                 dc.MessageCache?.TryGet(x => x.Id == xac.Options.MessageId && x.ChannelId == xac.Options.ChannelId, out message);
 
                                 entrypin.Channel = this.GetChannel(xac.Options.ChannelId) ?? new DiscordChannel { Id = xac.Options.ChannelId, Discord = this.Discord, GuildId = this.Id };
-                                entrypin.Message = message ?? new DiscordMessage { Id = xac.Options.MessageId, Discord = this.Discord };
+                                entrypin.Message = message ?? new() { Id = xac.Options.MessageId, Discord = this.Discord };
                             }
 
                             if (xac.TargetId.HasValue)
                             {
                                 dc.UserCache.TryGetValue(xac.TargetId.Value, out var user);
-                                entrypin.Target = user ?? new DiscordUser { Id = user.Id, Discord = this.Discord };
+                                entrypin.Target = user ?? new() { Id = user.Id, Discord = this.Discord };
                             }
 
                             break;
                         }
 
                     case AuditLogActionType.BotAdd:
-                        {
-                            entry = new DiscordAuditLogBotAddEntry();
+						{
+							entry = new DiscordAuditLogBotAddEntry();
 
-                            if (!(this.Discord is DiscordClient dc && xac.TargetId.HasValue))
-                            {
-                                break;
-                            }
+							if (this.Discord is DiscordClient dc && xac.TargetId.HasValue)
+							{
+								dc.UserCache.TryGetValue(xac.TargetId.Value, out var bot);
+								(entry as DiscordAuditLogBotAddEntry).TargetBot = bot ?? new() { Id = xac.TargetId.Value, Discord = this.Discord };
 
-                            dc.UserCache.TryGetValue(xac.TargetId.Value, out var bot);
-                            (entry as DiscordAuditLogBotAddEntry).TargetBot = bot ?? new DiscordUser { Id = xac.TargetId.Value, Discord = this.Discord };
+								break;
+							}
 
-                            break;
-                        }
+							break;
+						}
 
-                    case AuditLogActionType.MemberMove:
+					case AuditLogActionType.MemberMove:
                         entry = new DiscordAuditLogMemberMoveEntry();
 
-                        if (xac.Options == null)
+                        if (xac.Options is null)
                         {
                             break;
                         }
@@ -1795,7 +1778,7 @@ namespace DSharpPlus.Entities
                         var moveentry = entry as DiscordAuditLogMemberMoveEntry;
 
                         moveentry.UserCount = xac.Options.Count;
-                        moveentry.Channel = this.GetChannel(xac.Options.ChannelId) ?? new DiscordChannel { Id = xac.Options.ChannelId, Discord = this.Discord, GuildId = this.Id };
+                        moveentry.Channel = this.GetChannel(xac.Options.ChannelId) ?? new() { Id = xac.Options.ChannelId, Discord = this.Discord, GuildId = this.Id };
                         break;
 
                     case AuditLogActionType.MemberDisconnect:
@@ -1822,14 +1805,7 @@ namespace DSharpPlus.Entities
                                         After = (bool?)xc.NewValue
                                     };
                                     break;
-                                case "expire_behavior":
-                                    integentry.ExpireBehavior = new PropertyChange<int?>
-                                    {
-                                        Before = (int?)xc.OldValue,
-                                        After = (int?)xc.NewValue
-                                    };
-                                    break;
-                                case "expire_grace_period":
+                                case "expire_behavior" or "expire_grace_period":
                                     integentry.ExpireBehavior = new PropertyChange<int?>
                                     {
                                         Before = (int?)xc.OldValue,
@@ -1937,15 +1913,14 @@ namespace DSharpPlus.Entities
                 throw new ArgumentNullException(nameof(name));
 
             name = name.Trim();
-            if (name.Length < 2 || name.Length > 50)
+            if (name.Length is < 2 or > 50)
                 throw new ArgumentException("Emoji name needs to be between 2 and 50 characters long.");
 
-            if (image == null)
+            if (image is null)
                 throw new ArgumentNullException(nameof(image));
 
-            string image64 = null;
-            using (var imgtool = new ImageTool(image))
-                image64 = imgtool.GetBase64();
+            using ImageTool imgtool = new(image);
+            string image64 = imgtool.GetBase64();
 
             return this.Discord.ApiClient.CreateGuildEmojiAsync(this.Id, name, image64, roles?.Select(xr => xr.Id), reason);
         }
@@ -1988,7 +1963,7 @@ namespace DSharpPlus.Entities
         /// <exception cref="Exceptions.ServerErrorException">Thrown when Discord is unable to process the request.</exception>
         public Task DeleteEmojiAsync(DiscordGuildEmoji emoji, string reason = null)
         {
-            if (emoji == null)
+            if (emoji is null)
                 throw new ArgumentNullException(nameof(emoji));
 
             if (emoji.Guild.Id != this.Id)
@@ -2005,11 +1980,11 @@ namespace DSharpPlus.Entities
         /// <exception cref="Exceptions.ServerErrorException">Thrown when Discord is unable to process the request.</exception>
         public DiscordChannel GetDefaultChannel()
         {
-            if (this._channels != null)
+            if (this._channels is not null)
             {
-                return this._channels.Values.Where(xc => xc.Type == ChannelType.Text)
+                return this._channels.Values.Where(xc => xc.Type is ChannelType.Text)
                     .OrderBy(xc => xc.Position)
-                    .FirstOrDefault(xc => (xc.PermissionsFor(this.CurrentMember) & DSharpPlus.Permissions.AccessChannels) == DSharpPlus.Permissions.AccessChannels);
+                    .FirstOrDefault(xc => (xc.PermissionsFor(this.CurrentMember) & DSharpPlus.Permissions.AccessChannels) is DSharpPlus.Permissions.AccessChannels);
             }
 
             return null;
@@ -2228,13 +2203,10 @@ namespace DSharpPlus.Entities
         /// <returns>Whether the two members are equal.</returns>
         public static bool operator ==(DiscordGuild e1, DiscordGuild e2)
         {
-            var o1 = e1 as object;
-            var o2 = e2 as object;
-
-            if ((o1 == null && o2 != null) || (o1 != null && o2 == null))
+            if ((e1 is null) ^ (e2 is null))
                 return false;
 
-            if (o1 == null && o2 == null)
+            if (e1 is null && e2 is null)
                 return true;
 
             return e1.Id == e2.Id;

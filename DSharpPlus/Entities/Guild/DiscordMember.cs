@@ -85,7 +85,7 @@ namespace DSharpPlus.Entities
             get
             {
                 var role = this.Roles.OrderByDescending(xr => xr.Position).FirstOrDefault(xr => xr.Color.Value != 0);
-                if (role != null)
+                if (role is not null)
                     return role.Color;
                 return new DiscordColor();
             }
@@ -265,7 +265,7 @@ namespace DSharpPlus.Entities
             if (this.Discord is DiscordClient dc)
                 dm = dc._privateChannels.Values.FirstOrDefault(x => x.Recipients[0].Id == this.Id);
             
-            return dm != null ? Task.FromResult(dm) : this.Discord.ApiClient.CreateDmAsync(this.Id);
+            return dm is not null ? Task.FromResult(dm) : this.Discord.ApiClient.CreateDmAsync(this.Id);
         }
 
         /// <summary>
@@ -519,7 +519,7 @@ namespace DSharpPlus.Entities
         /// <returns>Whether the <see cref="DiscordMember"/> is equal to this <see cref="DiscordMember"/>.</returns>
         public bool Equals(DiscordMember e)
         {
-            if (ReferenceEquals(e, null))
+            if (e is null)
                 return false;
 
             if (ReferenceEquals(this, e))
@@ -549,14 +549,11 @@ namespace DSharpPlus.Entities
         /// <param name="e2">Second member to compare.</param>
         /// <returns>Whether the two members are equal.</returns>
         public static bool operator ==(DiscordMember e1, DiscordMember e2)
-        {
-            var o1 = e1 as object;
-            var o2 = e2 as object;
-
-            if ((o1 == null && o2 != null) || (o1 != null && o2 == null))
+		{
+            if ((e1 is null) ^ (e2 is null))
                 return false;
 
-            if (o1 == null && o2 == null)
+            if (e1 is null && e2 is null)
                 return true;
 
             return e1.Id == e2.Id && e1._guild_id == e2._guild_id;

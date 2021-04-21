@@ -202,13 +202,10 @@ namespace DSharpPlus.Entities
         /// <returns>Whether the two roles are equal.</returns>
         public static bool operator ==(DiscordRole e1, DiscordRole e2)
         {
-            var o1 = e1 as object;
-            var o2 = e2 as object;
-
-            if ((o1 == null && o2 != null) || (o1 != null && o2 == null))
+            if ((e1 is null) ^ (e2 is null))
                 return false;
 
-            if (o1 == null && o2 == null)
+            if (e1 is null && e2 is null)
                 return true;
 
             return e1.Id == e2.Id;
